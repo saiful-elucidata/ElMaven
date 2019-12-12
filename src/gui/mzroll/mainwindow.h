@@ -174,14 +174,6 @@ public:
 		return clsf;
 	}
 
-	groupClassifier * getGroupClassifier() {
- 		return groupClsf;
- 	}
- 
-  	svmPredictor * getSVMPredictor() {
- 		return groupPred;
- 	}
-
         LibraryManager* getLibraryManager() { return _libraryManager; }
 
     MatrixXf getIsotopicMatrix(PeakGroup* group, bool barplot = false);
@@ -501,9 +493,7 @@ private:
 	Analytics* analytics;
 	QSettings* settings;
 	ClassifierNeuralNet* clsf;
-	groupClassifier* groupClsf;
- 	svmPredictor* groupPred;
-	 
+
 	QList<QPointer<TableDockWidget> > groupTables;
 	//Added when merging with Maven776 - Kiran
     QMap< QPointer<TableDockWidget>, QToolButton*> groupTablesButtons;
