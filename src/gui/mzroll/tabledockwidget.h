@@ -377,6 +377,9 @@ signals:
 
 private:
   MultiSelectComboBox *_legend;
+  QList<QTreeWidgetItem*> _cycleBuffer;
+  bool _cycleInProgress;
+
   QPalette pal;
 
   RowData
@@ -406,6 +409,9 @@ private:
   peakTableSelectionType peakTableSelection;
   bool tableSelectionFlagUp;
   bool tableSelectionFlagDown;
+
+private slots:
+  void _refreshCycleBuffer();
 };
 
 class PeakTableDockWidget : public TableDockWidget {
