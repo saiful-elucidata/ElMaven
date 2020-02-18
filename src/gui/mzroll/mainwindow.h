@@ -62,6 +62,7 @@ class Mixpanel;
 class InfoDialog;
 class ProjectSaveWorker;
 class TempProjectSaveWorker;
+class CorrelationTable;
 
 enum ThemeType : int {
     ElMavenLight = 0,
@@ -246,6 +247,11 @@ public:
      * @return A pointer to the desired table if found, `nullptr` otherwise.
      */
     TableDockWidget* tableForTableId(int tableId);
+	void loadPollySettings(QString fileName);
+
+    CorrelationTable* getCorrelationTable() const {
+        return _correlationTable;
+    }
 
 Q_SIGNALS:
 	void valueChanged(int newValue);
@@ -529,6 +535,7 @@ private:
 
     Mixpanel* _usageTracker;
     InfoDialog* _infoDialog;
+    CorrelationTable* _correlationTable;
 
     /**
      * @brief The table currently being browsed by the user. Defaults to the
