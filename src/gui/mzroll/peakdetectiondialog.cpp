@@ -15,6 +15,7 @@
 #include "peakdetector.h"
 #include "tabledockwidget.h"
 #include "videoplayer.h"
+#include "pollyelmaveninterface.h"
 
 PeakDetectionSettings::PeakDetectionSettings(PeakDetectionDialog* dialog):pd(dialog)
 {
@@ -44,6 +45,7 @@ PeakDetectionSettings::PeakDetectionSettings(PeakDetectionDialog* dialog):pd(dia
 
     //peakMl curation
     settings.insert("peakMlCuration", QVariant::fromValue(pd->peakMl));
+
     // fragmentation settings
     settings.insert("matchFragmentation", QVariant::fromValue(pd->matchFragmentationOptions));
     settings.insert("minFragMatchScore", QVariant::fromValue(pd->minFragMatchScore));
@@ -84,8 +86,8 @@ void PeakDetectionSettings::updatePeakSettings(string key, string value)
         if(QString(v.typeName()).contains("QGroupBox"))
             v.value<QGroupBox*>()->setChecked(std::stod(value));
 
-        if(QString(v.typeName()).contains("QCheckBox"))
-            v.value<QCheckBox*>()->setChecked(std::stod(value));
+/*        if(QString(v.typeName()).contains("QCheckBox"))
+            v.value<QCheckBox*>()->setChecked(std::stod(value));*/
 
         if(QString(v.typeName()).contains("QSpinBox"))
             v.value<QSpinBox*>()->setValue(std::stod(value));
@@ -124,6 +126,8 @@ PeakDetectionDialog::PeakDetectionDialog(MainWindow* parent) :
 
         setModal(false);
         peakupdater = NULL;
+
+        peakMlSet = false;
 
         massCutoffType = "ppm";
         peakSettings = new PeakDetectionSettings(this);
@@ -185,6 +189,15 @@ PeakDetectionDialog::PeakDetectionDialog(MainWindow* parent) :
                 mainwindow->massCalcWidget->fragPpm,
                 SLOT(setValue(double)));
 
+        peakMl->setChecked(false);
+        connect(peakMl, &QCheckBox::toggled,
+                [this](const bool checked)
+                {
+                    if(checked){
+                        getLoginForPeakMl();
+                    }
+                });
+
         connect(quantileIntensity,SIGNAL(valueChanged(int)),this, SLOT(showIntensityQuantileStatus(int)));
         connect(quantileQuality, SIGNAL(valueChanged(int)), this, SLOT(showQualityQuantileStatus(int)));
         connect(quantileSignalBaselineRatio, SIGNAL(valueChanged(int)), this, SLOT(showBaselineQuantileStatus(int)));
@@ -200,6 +213,8 @@ PeakDetectionDialog::PeakDetectionDialog(MainWindow* parent) :
         chargeMin->setVisible(false);
         chargeMax->setVisible(false);
 
+
+
         connect(dbSearch, SIGNAL(toggled(bool)), SLOT(dbSearchClicked()));
         featureOptions->setChecked(false);
         connect(featureOptions, SIGNAL(toggled(bool)), SLOT(featureOptionsClicked()));
@@ -212,6 +227,29 @@ PeakDetectionDialog::PeakDetectionDialog(MainWindow* parent) :
                 });
 }
 
+void PeakDetectionDialog::getLoginForPeakMl()
+{
+    bool notRequireLogin = mainwindow->pollyElmavenInterfaceDialog->loginForPeakMl();
+    if(notRequireLogin){
+        peakMlSet = true;
+        mainwindow->mavenParameters->peakMl = true;
+    }
+}
+
+void PeakDetectionDialog::loginSuccessful()
+{
+    peakMlSet = true;
+    peakMl->setChecked(true);
+    mainwindow->mavenParameters->peakMl = true;
+}
+
+void PeakDetectionDialog::unsuccessfulLogin()
+{
+    peakMlSet = false;
+    peakMl->setChecked(false);
+    if(mainwindow)
+        mainwindow->mavenParameters->peakMl = false;
+}
 void PeakDetectionDialog::onReset()
 {
     emit resetSettings(peakSettings->getSettings().keys());
@@ -338,6 +376,10 @@ void PeakDetectionDialog::displayAppropriatePeakDetectionDialog(
 void PeakDetectionDialog::show() {
 
     if (mainwindow == NULL) return;
+
+    peakMl->setChecked(false);
+    peakMlSet = false;
+    mainwindow->mavenParameters->peakMl = false;
 
     mainwindow->getAnalytics()->hitScreenView("PeakDetectionDialog");
     // delete(peakupdater);
@@ -684,7 +726,7 @@ void PeakDetectionDialog::setMavenParameters(QSettings* settings) {
 
         mavenParameters->samples = mainwindow->getSamples();
 
-        if(peakMl->isChecked())
+        if(peakMlSet)
             mavenParameters->peakMl = true;
         peakupdater->setMavenParameters(mavenParameters);
 
