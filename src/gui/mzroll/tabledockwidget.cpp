@@ -98,6 +98,11 @@ TableDockWidget::TableDockWidget(MainWindow *mw) {
   viewType = groupView;
 
   treeWidget = new PeakGroupTreeWidget(this);
+  if (_mainwindow->mavenParameters->peakMl)
+    hasClassifiedGroups = true;
+  else
+    hasClassifiedGroups = false;
+
   treeWidget->setSortingEnabled(false);
   treeWidget->setSelectionMode(QAbstractItemView::ExtendedSelection);
   treeWidget->setObjectName("PeakGroupTable");
@@ -221,7 +226,7 @@ void TableDockWidget::setupPeakTable() {
   QStringList colNames;
 
   // Add common coulmns to the Table
-  if(_mainwindow->mavenParameters->peakMl)
+  if(hasClassifiedGroups)
     colNames << "Label";
   colNames << "#";
   colNames << "ID";
@@ -241,7 +246,7 @@ void TableDockWidget::setupPeakTable() {
     colNames << "Max quality";
     colNames << "MS2 score";
     colNames << "#MS2 events";
-    if(_mainwindow->mavenParameters->peakMl)
+    if(hasClassifiedGroups)
       colNames << "Probability"; // TODO: add this column conditionally
     colNames << "Rank";
   } else if (viewType == peakView) {
@@ -783,7 +788,7 @@ void TableDockWidget::showAllGroups() {
     if (clusterId && group->meanMz > 0 && group->peakCount() > 0) {
       if (!parents.contains(clusterId)) {
         parents[clusterId] = new QTreeWidgetItem(treeWidget);
-        if(_mainwindow->mavenParameters->peakMl)
+        if(hasClassifiedGroups)
         {
             parents[clusterId]->setText(1, QString("Cluster ") +
                                                QString::number(clusterId));
@@ -829,6 +834,8 @@ void TableDockWidget::showAllGroups() {
 
   treeWidget->header()->setSectionResizeMode(1,QHeaderView::Interactive);
   treeWidget->setColumnWidth(1, 250);
+  if(hasClassifiedGroups)
+    sortBy(1);
 }
 
 QMap<TableDockWidget::PeakTableSubsetType, int>
@@ -1501,7 +1508,7 @@ void TableDockWidget::setGroupLabel(char label)
       shared_ptr<PeakGroup> group = groupForItem(item);
 
       multimap<float, string> predictionInference;
-      if (_mainwindow->mavenParameters->peakMl) {
+      if (hasClassifiedGroups) {
         predictionInference = group->predictionInference();
       }
       
@@ -1515,7 +1522,7 @@ void TableDockWidget::setGroupLabel(char label)
       if (item->parent() != nullptr)
         updateItem(item->parent(), false);
 
-      if(_mainwindow->mavenParameters->peakMl) {
+      if(hasClassifiedGroups) {
         group->setPredictionInference(predictionInference);
       }  
     }
@@ -2255,7 +2262,7 @@ void TableDockWidget::contextMenuEvent(QContextMenuEvent *event) {
     z2->setEnabled(false);
   }
 
-  if(_mainwindow->mavenParameters->peakMl)
+  if(hasClassifiedGroups)
   {
       QAction *z8 = menu.addAction("Explain classification");
       classificationWidget = new ClassificationWidget(this);
@@ -2791,10 +2798,12 @@ QWidget *TableToolBarWidgetAction::createWidget(QWidget *parent)
 }
 
 PeakTableDockWidget::PeakTableDockWidget(MainWindow *mw,
-                                         const QString& tableTitle)
+                                         const QString& tableTitle, 
+                                         bool classifiedGroups)
   : TableDockWidget(mw) {
 
   _mainwindow = mw;
+  this->hasClassifiedGroups = classifiedGroups;
   auto lastId = lastTableId();
   tableId = ++lastId;
   setTitleForId(tableId, tableTitle);
@@ -2835,11 +2844,10 @@ PeakTableDockWidget::PeakTableDockWidget(MainWindow *mw,
   QWidget *spacer = new QWidget();
   spacer->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Minimum);
 
-
-
   toolBar->addAction(titlePeakTable);
   toolBar->addSeparator();
-  if(_mainwindow->mavenParameters->peakMl){
+
+  if(hasClassifiedGroups){
       MultiSelectComboBox *legend = new MultiSelectComboBox(this);
       legend->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Maximum);
       auto labelsForLegend = TableDockWidget::labelsForLegend();
