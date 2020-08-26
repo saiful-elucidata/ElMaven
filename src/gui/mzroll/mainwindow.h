@@ -247,7 +247,6 @@ public:
      * @return A pointer to the desired table if found, `nullptr` otherwise.
      */
     TableDockWidget* tableForTableId(int tableId);
-	void loadPollySettings(QString fileName);
 
     CorrelationTable* getCorrelationTable() const {
         return _correlationTable;

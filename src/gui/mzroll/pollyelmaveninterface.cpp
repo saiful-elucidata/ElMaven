@@ -1100,11 +1100,11 @@ QStringList PollyElmavenInterfaceDialog::_prepareFilesToUpload(QDir qdir,
     QCoreApplication::processEvents();
 
     if (groupSetCombo->currentIndex() == 0) {
-        peakTable->allPeaks();
+        peakTable->wholePeakSet();
     } else if (groupSetCombo->currentIndex() == 1) {
-        peakTable->goodPeaks();
+        peakTable->goodPeakSet();
     } else if (groupSetCombo->currentIndex() == 2) {
-        peakTable->excludeBadPeaks();
+        peakTable->excludeBadPeakSet();
     }
 
     peakTable->treeWidget->selectAll();
@@ -1120,7 +1120,7 @@ QStringList PollyElmavenInterfaceDialog::_prepareFilesToUpload(QDir qdir,
                             + QDir::separator()
                             + datetimestamp
                             + "_Peaks_information_json_Elmaven_Polly.json";
-    peakTable->exportJsonToPolly(_writeableTempDir, jsonFilename);
+    peakTable->exportJsonToPolly(_writeableTempDir, jsonFilename, true);
 
     if (_selectedApp == PollyApp::PollyPhi) {
         QCoreApplication::processEvents();
@@ -1146,7 +1146,7 @@ QStringList PollyElmavenInterfaceDialog::_prepareFilesToUpload(QDir qdir,
                             + "_Cloud_model_mapping_file.csv";
         csvrpt.writeDataForPolly(modelFile.toStdString(), groups);
     } else {
-        peakTable->exportJsonToPolly(_writeableTempDir, jsonFilename);
+        peakTable->exportJsonToPolly(_writeableTempDir, jsonFilename, false);
     }
 
     // Saving settings file
@@ -1197,11 +1197,11 @@ PollyElmavenInterfaceDialog::_prepareSessionFiles(QString datetimestamp)
     }
 
     if (groupSetComboAlt->currentIndex() == 0) {
-        peakTable->allPeaks();
+        peakTable->wholePeakSet();
     } else if (groupSetComboAlt->currentIndex() == 1) {
-        peakTable->goodPeaks();
+        peakTable->goodPeakSet();
     } else if (groupSetComboAlt->currentIndex() == 2) {
-        peakTable->excludeBadPeaks();
+        peakTable->excludeBadPeakSet();
     }
 
     QString tableName = TableDockWidget::getTitleForId(peakTable->tableId);
@@ -1212,7 +1212,7 @@ PollyElmavenInterfaceDialog::_prepareSessionFiles(QString datetimestamp)
                            + "_"
                            + tableName
                            + ".json";
-    peakTable->exportJsonToPolly(_writeableTempDir, jsonFilename);
+    peakTable->exportJsonToPolly(_writeableTempDir, jsonFilename, false);
     filenames.append(jsonFilename);
 
     QCoreApplication::processEvents();
