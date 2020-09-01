@@ -191,7 +191,7 @@ PeakDetectionDialog::PeakDetectionDialog(MainWindow* parent) :
                 SLOT(setValue(double)));
 
         peakMl->setChecked(false);
-        connect(peakMl, &QCheckBox::toggled,
+        connect(peakMl, &QGroupBox::toggled,
                 [this](const bool checked)
                 {
                     if(checked){
@@ -447,7 +447,8 @@ void PeakDetectionDialog::inputInitialValuesPeakDetectionDialog() {
             if (!db.empty()) compoundDatabase->addItem(QString(db.c_str()));
         }
         matchFragmentationOptions->setChecked(fragmentationWasEnabled);
-
+        modelTypes->clear();
+        modelTypes->addItem("Global Model Elucidata");
         // selecting the compound database that is selected by the user in the
         // ligand widget
         QString selectedDB = mainwindow->ligandWidget->getDatabaseName();
@@ -530,6 +531,7 @@ void PeakDetectionDialog::setDetectionMode(bool detectionModeOn)
         peakScoringOptions->setDisabled(true);
         computeButton->setDisabled(true);
         resetButton->setDisabled(true);
+        peakMl->setDisabled(true);
     } else {
         featureOptions->setEnabled(true);
         dbSearch->setEnabled(true);
@@ -537,6 +539,7 @@ void PeakDetectionDialog::setDetectionMode(bool detectionModeOn)
         peakScoringOptions->setEnabled(true);
         computeButton->setEnabled(true);
         resetButton->setEnabled(true);
+        peakMl->setEnabled(true);
     }
 }
 
