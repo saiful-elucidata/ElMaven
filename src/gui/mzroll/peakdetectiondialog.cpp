@@ -16,6 +16,7 @@
 #include "tabledockwidget.h"
 #include "videoplayer.h"
 #include "pollyelmaveninterface.h"
+#include "superSlider.h"
 
 PeakDetectionSettings::PeakDetectionSettings(PeakDetectionDialog* dialog):pd(dialog)
 {
@@ -191,6 +192,11 @@ PeakDetectionDialog::PeakDetectionDialog(MainWindow* parent) :
                 SLOT(setValue(double)));
 
         peakMl->setChecked(false);
+        QHBoxLayout* _layout;
+        _layout = new QHBoxLayout;
+        slider = new RangeSlider(Qt::Horizontal, RangeSlider::Option::DoubleHandles, this);
+        _layout->addWidget(slider);
+        peakMl->setLayout(_layout);
         connect(peakMl, &QGroupBox::toggled,
                 [this](const bool checked)
                 {
@@ -744,8 +750,11 @@ void PeakDetectionDialog::setMavenParameters(QSettings* settings) {
 
         mavenParameters->samples = mainwindow->getSamples();
 
-        if(peakMlSet)
+        if(peakMlSet) {
             mavenParameters->peakMl = true;
+            mavenParameters->badGroupLimit = slider->GetLowerValue() / 10.0;
+            mavenParameters->maybeGoodGroupLimit = slider->GetUpperValue() / 10.0;
+        }
         peakupdater->setMavenParameters(mavenParameters);
 
     }
