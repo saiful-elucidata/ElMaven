@@ -957,8 +957,11 @@ void TableDockWidget::showOnlySubsets(QList<PeakTableSubsetType> visibleSubsets)
     auto subset = hideItr.key();
     auto& itemsForSubset = hideItr.value();
     if (!visibleSubsets.contains(subset)) {
-      for (auto item : itemsForSubset)
+      for (auto item : itemsForSubset) {
         item->setHidden(true);
+        auto group = groupForItem(item);
+        group->isHiddenFromTable = true;
+      }
     }
   }
 
@@ -971,8 +974,11 @@ void TableDockWidget::showOnlySubsets(QList<PeakTableSubsetType> visibleSubsets)
     auto subset = showItr.key();
     auto& itemsForSubset = showItr.value();
     if (visibleSubsets.contains(subset)) {
-      for (auto item : itemsForSubset)
-        item->setHidden(false);
+      for (auto item : itemsForSubset) {
+        item->setHidden(false); 
+        auto group = groupForItem(item);
+        group->isHiddenFromTable = false;
+      }
     }
   }
 }
@@ -1131,12 +1137,22 @@ void TableDockWidget::exportGroupsToSpreadsheet() {
                         ms2GroupExists,
                         includeSetNamesLines,
                         _mainwindow->mavenParameters);
-  QList<shared_ptr<PeakGroup>> selectedGroups = getSelectedGroups();
+  QList<shared_ptr<PeakGroup>> selectedGroups;
+  
+  if (static_cast<int>(peakTableSelection) == 10)
+    selectedGroups = getDisplayedGroups();
+  else
+    selectedGroups = getSelectedGroups();
+
   csvreports.setSelectionFlag(static_cast<int>(peakTableSelection));
 
   for (auto group : _topLevelGroups) {
-    if (selectedGroups.contains(group))
-      csvreports.addGroup(group.get());
+    if (selectedGroups.contains(group)) {
+      if (hasClassifiedGroups)
+        csvreports.addGroup(group.get(), true);
+      else
+        csvreports.addGroup(group.get());
+    }
   }
  
   if (csvreports.getErrorReport() != "") {
@@ -1444,7 +1460,7 @@ void TableDockWidget::showSelectedGroup()
   } else {
     emit ghostPeakGroupSelected(false);
   }
-
+  
   _mainwindow->setPeakGroup(group);
 }
 
@@ -1462,6 +1478,25 @@ QList<shared_ptr<PeakGroup>> TableDockWidget::getSelectedGroups()
   return selectedGroups;
 }
 
+QList<shared_ptr<PeakGroup>> TableDockWidget::getDisplayedGroups()
+{
+  QList<shared_ptr<PeakGroup>> displayedGroups;
+ 
+  Q_FOREACH (QTreeWidgetItem *item, treeWidget->selectedItems()) {
+    if (item) {
+      if (item->isHidden())
+        continue;
+
+      shared_ptr<PeakGroup> group = groupForItem(item);
+      if (group != nullptr) {
+        displayedGroups.append(group);
+      }
+
+    }
+  }
+  
+  return displayedGroups;
+}
 void TableDockWidget::showNotification()
 {
   _mainwindow->showNotification(this);
@@ -2178,11 +2213,15 @@ void TableDockWidget::renderPdf(QString fileName)
     }
 
     QList<shared_ptr<PeakGroup>> selected;
+
     // PDF report only for selected groups
     if(peakTableSelection == PeakTableSubsetType::Selected) {
         selected = getSelectedGroups();
-    } else {
+    } else if (peakTableSelection == PeakTableSubsetType::Whole 
+              || peakTableSelection == PeakTableSubsetType::Good) {
         selected = getGroups();
+    } else if (peakTableSelection == PeakTableSubsetType::Displayed) {
+      selected = getDisplayedGroups();
     }
 
     for (int i = 0; i < selected.size(); i++) {
@@ -2199,6 +2238,13 @@ void TableDockWidget::renderPdf(QString fileName)
             }
         }
         for (auto& child : group->childIsotopes()) {
+          if (peakTableSelection == PeakTableSubsetType::Good 
+              && child->userLabel() != 'g' ) 
+              continue;
+          if (peakTableSelection == PeakTableSubsetType::Displayed
+              && child->isHiddenFromTable)
+              continue; 
+              
             _mainwindow->getEicWidget()->renderPdf(child, &painter);
             if (!printer.newPage()) {
                 qWarning("failed in flushing page to disk, disk full?");
@@ -2340,26 +2386,6 @@ void TableDockWidget::focusOutEvent(QFocusEvent *event) {
     setPalette(pal);
   }
 }
-
-// void TableDockWidget::findMatchingCompounds() {
-//   // matching compounds
-//   MassCutoff *massCutoff = _mainwindow->getUserMassCutoff();
-//   float ionizationMode = _mainwindow->mavenParameters->ionizationMode;
-//   for (int i = 0; i < allgroups.size(); i++) {
-//     PeakGroup &g = allgroups[i];
-//     int charge = _mainwindow->mavenParameters->getCharge(g.getCompound());
-//     QSet<Compound *> compounds =
-//         _mainwindow->massCalcWidget->findMathchingCompounds(g.meanMz,
-//                                                             massCutoff,
-//                                                             charge);
-//     if (compounds.size() > 0)
-//       Q_FOREACH (Compound *c, compounds) {
-//         g.tagString += " |" + c->name();
-//         break;
-//       }
-//   }
-//   updateTable();
-// }
 
 void TableDockWidget::writeQEInclusionList(QString filename) {
   QFile file(filename);
@@ -2672,6 +2698,12 @@ QWidget *TableToolBarWidgetAction::createWidget(QWidget *parent)
 
     QAction *exportSelected =
         btnGroupCSV->menu()->addAction(tr("Export selected groups"));
+    connect(exportSelected, SIGNAL(triggered()), td, SLOT(selectedPeakSet()));
+    connect(exportSelected,
+            SIGNAL(triggered()),
+            td,
+            SLOT(exportGroupsToSpreadsheet()));
+    connect(exportSelected, SIGNAL(triggered()), td, SLOT(showNotification()));
     
     if (!td->hasClassifiedGroups) {
       QAction *exportAll =
@@ -2682,7 +2714,7 @@ QWidget *TableToolBarWidgetAction::createWidget(QWidget *parent)
           btnGroupCSV->menu()->addAction(tr("Export excluding bad groups"));
       QAction *exportBad =
           btnGroupCSV->menu()->addAction(tr("Export bad groups"));
-      connect(exportAll, SIGNAL(triggered()), td, SLOT(allPeaks()));
+      connect(exportAll, SIGNAL(triggered()), td, SLOT(wholePeakSet()));
       connect(exportAll, SIGNAL(triggered()), td->treeWidget, SLOT(selectAll()));
       connect(exportAll,
               SIGNAL(triggered()),
@@ -2706,7 +2738,7 @@ QWidget *TableToolBarWidgetAction::createWidget(QWidget *parent)
               SLOT(exportGroupsToSpreadsheet()));
       connect(excludeBad, SIGNAL(triggered()), td, SLOT(showNotification()));
 
-      connect(exportBad, SIGNAL(triggered()), td, SLOT(badPeaks()));
+      connect(exportBad, SIGNAL(triggered()), td, SLOT(badPeaksSet()));
       connect(exportBad, SIGNAL(triggered()), td->treeWidget, SLOT(selectAll()));
       connect(exportBad,
               SIGNAL(triggered()),
@@ -2715,8 +2747,15 @@ QWidget *TableToolBarWidgetAction::createWidget(QWidget *parent)
       connect(exportBad, SIGNAL(triggered()), td, SLOT(showNotification()));
     } else {
       QAction *exportAllDisplayed =
-          btnGroupCSV->menu()->addAction(tr("Export all displayed groups"));
-      
+          btnGroupCSV->menu()->addAction(tr("Export displayed groups"));
+      connect(exportAllDisplayed, SIGNAL(triggered()), td, SLOT(showNotification()));
+      connect(exportAllDisplayed, SIGNAL(triggered()), td, SLOT(displayedPeakSet()));
+      connect(exportAllDisplayed, SIGNAL(triggered()), td->treeWidget, SLOT(selectAll()));
+      connect(exportAllDisplayed,
+              SIGNAL(triggered()),
+              td,
+              SLOT(exportGroupsToSpreadsheet()));
+
       QAction *exportAllSignals =
           btnGroupCSV->menu()->addAction(tr("Export all signals"));
       connect(exportAllSignals, SIGNAL(triggered()), td, SLOT(goodPeakSet()));
@@ -2728,15 +2767,8 @@ QWidget *TableToolBarWidgetAction::createWidget(QWidget *parent)
       connect(exportAllDisplayed, SIGNAL(triggered()), td, SLOT(showNotification()));
     }
 
-    connect(exportSelected, SIGNAL(triggered()), td, SLOT(selectedPeakSet()));
-    connect(exportSelected,
-            SIGNAL(triggered()),
-            td,
-            SLOT(exportGroupsToSpreadsheet()));
-    connect(exportSelected, SIGNAL(triggered()), td, SLOT(showNotification()));
-
-    
     return btnGroupCSV;
+
   } else if (btnName == "btnSaveJson") {
     QToolButton *btnSaveJson = new QToolButton(parent);
     btnSaveJson->setIcon(QIcon(rsrcPath + "/JSON.png"));
@@ -2801,16 +2833,31 @@ QWidget *TableToolBarWidgetAction::createWidget(QWidget *parent)
 
     QAction *exportSelected =
         btnPDF->menu()->addAction(tr("Export selected groups"));
-    QAction *exportAll =
-        btnPDF->menu()->addAction(tr("Export all groups"));
-
+    
     connect(exportSelected, SIGNAL(triggered()), td, SLOT(selectedPeakSet()));
     connect(exportSelected, SIGNAL(triggered()), td, SLOT(printPdfReport()));
     connect(exportSelected, SIGNAL(triggered()), td, SLOT(showNotification()));
 
-    connect(exportAll, SIGNAL(triggered()), td, SLOT(wholePeakSet()));
-    connect(exportAll, SIGNAL(triggered()), td, SLOT(printPdfReport()));
-    connect(exportAll, SIGNAL(triggered()), td, SLOT(showNotification()));
+    if (!td->hasClassifiedGroups) {  
+      QAction *exportAll =
+          btnPDF->menu()->addAction(tr("Export all groups"));
+      connect(exportAll, SIGNAL(triggered()), td, SLOT(wholePeakSet()));
+      connect(exportAll, SIGNAL(triggered()), td, SLOT(printPdfReport()));
+      connect(exportAll, SIGNAL(triggered()), td, SLOT(showNotification()));
+    } else {
+      QAction *exportDisplayedGroups =
+          btnPDF->menu()->addAction(tr("Export displayed groups"));
+      connect(exportDisplayedGroups, SIGNAL(triggered()), td->treeWidget, SLOT(selectAll()));
+      connect(exportDisplayedGroups, SIGNAL(triggered()), td, SLOT(displayedPeakSet()));
+      connect(exportDisplayedGroups, SIGNAL(triggered()), td, SLOT(printPdfReport()));
+      connect(exportDisplayedGroups, SIGNAL(triggered()), td, SLOT(showNotification()));
+
+      QAction *exportGoodSignals =
+          btnPDF->menu()->addAction(tr("Export all signals"));
+      connect(exportGoodSignals, SIGNAL(triggered()), td, SLOT(goodPeakSet()));
+      connect(exportGoodSignals, SIGNAL(triggered()), td, SLOT(printPdfReport()));
+      connect(exportGoodSignals, SIGNAL(triggered()), td, SLOT(showNotification()));
+    }
     return btnPDF;
   } else if (btnName == "btnX") {
     QToolButton *btnX = new QToolButton(parent);
