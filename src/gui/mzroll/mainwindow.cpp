@@ -54,7 +54,6 @@
 #include "videoplayer.h"
 #include "eiclogic.h"
 
-
 #ifdef WIN32
 #include <windows.h>
 #endif
