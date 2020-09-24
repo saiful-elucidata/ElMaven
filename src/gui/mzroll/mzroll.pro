@@ -155,7 +155,8 @@ FORMS = forms/settingsform.ui  \
         forms/adductwidget.ui \
         forms/updatedialog.ui \
         forms/peakeditor.ui \
-        forms/groupsettingslog.ui
+        forms/groupsettingslog.ui   \
+        forms/relabelgroupsdialog.ui
 
 HEADERS += stable.h \
            backgroundopsthread.h \
@@ -215,12 +216,12 @@ HEADERS += stable.h \
            peakeditor.h \
            groupsettingslog.h \
            projectsaveworker.h \
-           updatedialog.h       \
            multiselectcombobox.h \
            correlationtable.h   \
            classificationWidget.h   \
            QHistogramSlider.h       \
-           superSlider.h
+           superSlider.h            \
+           relabelGroupsDialog.h 
 
 SOURCES += mainwindow.cpp  \
            backgroundopsthread.cpp \
@@ -280,7 +281,8 @@ SOURCES += mainwindow.cpp  \
            correlationtable.cpp     \
            classificationWidget.cpp \
            QHistogramSlider.cpp     \
-           superSlider.cpp
+           superSlider.cpp          \
+           relabelGroupsDialog.cpp
 
 linux {
     SOURCES -= autoupdater.cpp
