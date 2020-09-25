@@ -117,6 +117,7 @@ TableDockWidget::TableDockWidget(MainWindow *mw) {
   viewType = groupView;
 
   treeWidget = new PeakGroupTreeWidget(this);
+  relabelDialog = new RelabelGroupsDialog(this);
 
   treeWidget->setSortingEnabled(false);
   treeWidget->setSelectionMode(QAbstractItemView::ExtendedSelection);
@@ -180,6 +181,11 @@ TableDockWidget::TableDockWidget(MainWindow *mw) {
           SIGNAL(groupNameSelected(string)),
           this,
           SLOT(displayNextGroupInCorrelationTable(string)));
+  
+  connect(this, 
+          SIGNAL(updateRelabelStatusBar(QString, int, int)),
+          relabelDialog,
+          SLOT(setProgressBar(QString, int, int)));
 
   setupFiltersDialog();
 
@@ -2561,11 +2567,12 @@ void TableDockWidget::setupFiltersDialog() {
 
 void TableDockWidget::showRelabelWidget()
 {
-  RelabelGroupsDialog* relabelDialog = new RelabelGroupsDialog(this);
+  relabelDialog->showDialog();
 }
 
 void TableDockWidget::relabelGroups(float changedBadLimit, float changedMaybeGoodLimit)
 {
+
   disconnect(_legend,
               &MultiSelectComboBox::selectionChanged,
               this,
@@ -2615,7 +2622,11 @@ void TableDockWidget::relabelGroups(float changedBadLimit, float changedMaybeGoo
                           };
 
   auto groups = _topLevelGroups;
+  int totalSteps = groups.size();
+  int steps = 1;
   for (auto &group : groups) {
+    Q_EMIT(updateRelabelStatusBar("Relabeling", steps, totalSteps));
+    steps++;
     changePrediction(group.get(), 
                     changedBadLimit,
                     changedMaybeGoodLimit);
