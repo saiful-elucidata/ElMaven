@@ -430,7 +430,7 @@ void BackgroundOpsThread::classifyGroups(vector<PeakGroup>& groups)
         }
     }
     
-    Q_EMIT(updateProgressBar("Classifying peaks…", 0, 0));
+    Q_EMIT(updateProgressBar("Preparing inputs for classification…", 0, 0));
     
     QString peakAttributesFile = tempDir
                                  + QDir::separator()
@@ -594,7 +594,10 @@ void BackgroundOpsThread::classifyGroups(vector<PeakGroup>& groups)
                                 
                             };
     
+    int groupSize = groups.size();
+    int countGroups = 0;
     for (auto& group : groups) {
+        emit updateProgressBar("Classifying Peakgroups", countGroups++, groupSize);
         assignPrediction(&group, 
                          predictions, 
                          inferences, 
