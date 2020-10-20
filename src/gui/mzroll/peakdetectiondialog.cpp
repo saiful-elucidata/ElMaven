@@ -641,6 +641,17 @@ void PeakDetectionDialog::findPeaks()
                 setDetectionMode(false);
                 close();
             });
+    connect(peakupdater, 
+            &BackgroundOpsThread::toggleCancel, 
+            this,
+            [this] {
+                if (cancelButton->isEnabled()) {
+                    cancelButton->setEnabled(false);
+                } else {
+                    cancelButton->setEnabled(true);
+                }     
+            });
+
     if(!settings->value("hideVideoPlayer", 0).toBool())
         connect(peakupdater, SIGNAL(finished()), mainwindow->vidPlayer, SLOT(show()));
     peakupdater->setPeakDetector(new PeakDetector(peakupdater->mavenParameters));
