@@ -196,8 +196,6 @@ PeakDetectionDialog::PeakDetectionDialog(MainWindow* parent) :
                 mainwindow->massCalcWidget->fragPpm,
                 SLOT(setValue(double)));
 
-        peakMl->setChecked(false);
-        getModelsList();
         slider = new RangeSlider(Qt::Horizontal, RangeSlider::Option::DoubleHandles, this);
         gridLayout_6->addWidget(slider);
         connect(peakMl, &QGroupBox::toggled,
@@ -248,9 +246,12 @@ void PeakDetectionDialog::getLoginForPeakMl()
     if(notRequireLogin){
         peakMlSet = true;
         mainwindow->mavenParameters->peakMl = true;
-        mainwindow->mavenParameters->peakMlModelType =
-            modelTypes->currentText().toStdString();
         modelTypes->setEnabled(true);
+        getModelsList();
+        modelTypes->clear();
+        modelTypes->addItem("Global Model Elucidata");
+        for (auto model : _modelsList)
+            modelTypes->addItem(QString::fromStdString(model));
     }
 }
 
@@ -259,10 +260,10 @@ void PeakDetectionDialog::loginSuccessful()
     peakMlSet = true;
     peakMl->setChecked(true);
     mainwindow->mavenParameters->peakMl = true;
-    mainwindow->mavenParameters->peakMlModelType =
-        modelTypes->currentText().toStdString();
     modelTypes->setEnabled(true);
     getModelsList();
+    for (auto model : _modelsList)
+        modelTypes->addItem(QString::fromStdString(model));
 }
 
 void PeakDetectionDialog::unsuccessfulLogin()
@@ -515,9 +516,12 @@ void PeakDetectionDialog::getModelsList()
     auto cookieFile = QStandardPaths::writableLocation(
                     QStandardPaths::GenericConfigLocation)
                     + QDir::separator() 
-                    + "cookie.json" ;
+                    + "El-MAVEN_cookie.json" ;
     
     ifstream readCookie(cookieFile.toStdString());
+    if(!readCookie.is_open())
+        return;
+
     json cookieInput = json::parse(readCookie);
     string refreshToken = cookieInput["refreshToken"];
     string idToken = cookieInput["idToken"];
@@ -841,6 +845,7 @@ void PeakDetectionDialog::setMavenParameters(QSettings* settings) {
             mavenParameters->peakMl = true;
             mavenParameters->badGroupLimit = slider->GetLowerValue() / 10.0;
             mavenParameters->maybeGoodGroupLimit = slider->GetUpperValue() / 10.0;
+            mavenParameters->peakMlModelType = modelTypes->currentText().toStdString();
         }
         peakupdater->setMavenParameters(mavenParameters);
 
