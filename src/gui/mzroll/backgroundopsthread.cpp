@@ -496,13 +496,16 @@ void BackgroundOpsThread::classifyGroups(vector<PeakGroup>& groups)
     map<int, pair<int, float>> predictions;
     map<int, multimap<float, string>> inferences;
     map<int, map<int, float>> correlations;
+    map<int, pair<float, float>> shapValues;
     map<string, int> headerColumnMap;
     map<string, int> attributeHeaderColumnMap;
     vector<string> headers;
     vector<string> knownHeaders = {"groupId",
                                    "label",
                                    "probability",
-                                   "correlations"};
+                                   "correlations",
+                                   "output value",
+                                   "base value"};
     while (!file.atEnd()) {
         string line = file.readLine().trimmed().toStdString();
         if (line.empty())
@@ -536,6 +539,8 @@ void BackgroundOpsThread::classifyGroups(vector<PeakGroup>& groups)
         int groupId = -1;
         int label = -1;
         float probability = 0.0f;
+        float outputValue = 0.0f;
+        float baseValue = 0.0f;
         map<int, float> group_correlations;
         if (headerColumnMap.count("groupId"))
             groupId = string2integer(fields[headerColumnMap["groupId"]]);
@@ -543,6 +548,10 @@ void BackgroundOpsThread::classifyGroups(vector<PeakGroup>& groups)
             label = string2integer(fields[headerColumnMap["label"]]);
         if (headerColumnMap.count("probability"))
             probability = string2float(fields[headerColumnMap["probability"]]);
+        if (headerColumnMap.count("output value"))
+            outputValue = string2float(fields[headerColumnMap["output value"]]);
+        if (headerColumnMap.count("base value"))
+            baseValue = string2float(fields[headerColumnMap["base value"]]);
         if (headerColumnMap.count("correlations")) {
             QString correlations_str =
                 QString::fromStdString(fields[headerColumnMap["correlations"]]);
@@ -564,14 +573,16 @@ void BackgroundOpsThread::classifyGroups(vector<PeakGroup>& groups)
 
         if (groupId != -1) {
             predictions[groupId] = make_pair(label, probability);
-
+            shapValues[groupId] = make_pair(outputValue, baseValue);
             // we use multimap for values mapping to attribute names because
             // later on sorted values are really helpful
             multimap<float, string> groupInference;
             for (auto& element : attributeHeaderColumnMap) {
-                string attribute = element.first;
-                float value = string2float(fields[element.second]);
-                groupInference.insert(make_pair(value, attribute));
+                string attribute = fields[element.second];
+                auto splitAttributeValue = mzUtils::split(attribute, "__");
+                string attributeName = splitAttributeValue[0];
+                float value = string2float(splitAttributeValue[1]);
+                groupInference.insert(make_pair(value, attributeName));
             }
             inferences[groupId] = groupInference;
             correlations[groupId] = group_correlations;
@@ -595,10 +606,15 @@ void BackgroundOpsThread::classifyGroups(vector<PeakGroup>& groups)
                                 if (correlations.count(group->groupId()) == 0)
                                     return;
 
+                                if (shapValues.count(group->groupId())) {
+                                    auto shapValue = shapValues.at(group->groupId());
+                                    group->outputValue = shapValue.first;
+                                    group->baseValue = shapValue.second;
+                                }
+
                                 auto& group_correlations = correlations.at(group->groupId());
                                 for (auto& elem : group_correlations)
-                                    group->addCorrelatedGroup(elem.first, elem.second);
-                                
+                                    group->addCorrelatedGroup(elem.first, elem.second);  
                             };
     
     int groupSize = groups.size();
