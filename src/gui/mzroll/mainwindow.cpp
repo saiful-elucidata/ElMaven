@@ -423,7 +423,7 @@ using namespace mzUtils;
 
 	setWindowIcon(QIcon(":/images/icon.png"));
 
-    //seeting correlation table 
+    //setting correlation table 
     _correlationTable = new CorrelationTable;
     addDockWidget(Qt::BottomDockWidgetArea,
                   _correlationTable,
@@ -1044,7 +1044,7 @@ void MainWindow::noActiveInternet() {
                             " connection and try again later.</b></p>");
     htmlText += "<p>Please contact tech support at elmaven@elucidata.io if the problem persists.</p>";
     warning->setText(htmlText);
-    warning->setIcon(QMessageBox::Icon::Critical);
+    warning->setIcon(QMessageBox::Icon::Warning);
 
     auto yesButton = warning->addButton(tr("Ok"),
                                 QMessageBox::AcceptRole);
