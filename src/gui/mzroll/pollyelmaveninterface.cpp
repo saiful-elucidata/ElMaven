@@ -13,7 +13,6 @@
 #include "pollywaitdialog.h"
 #include "projectdockwidget.h"
 #include "tabledockwidget.h"
-#include "peakdetectiondialog.h"
 
 PollyElmavenInterfaceDialog::PollyElmavenInterfaceDialog(MainWindow* mw)
     : QDialog(mw), _mainwindow(mw), _loginform(nullptr)
@@ -23,8 +22,6 @@ PollyElmavenInterfaceDialog::PollyElmavenInterfaceDialog(MainWindow* mw)
 
     qRegisterMetaType<PollyApp>("PollyApp");
     qRegisterMetaType<QMap<PollyApp, bool>>();
-
-    showPollyApps = true;
 
     auto configLocation = QStandardPaths::QStandardPaths::GenericConfigLocation;
     _writeableTempDir = QStandardPaths::writableLocation(configLocation)
@@ -198,8 +195,6 @@ PollyElmavenInterfaceDialog::PollyElmavenInterfaceDialog(MainWindow* mw)
             &QTabWidget::currentChanged,
             this,
             &PollyElmavenInterfaceDialog::_changeMode);
-    connect(this, SIGNAL(loginResponse()), _mainwindow->peakDetectionDialog, SLOT(loginSuccessful()));
-    connect(this, SIGNAL(loginUnsuccessful()), _mainwindow->peakDetectionDialog, SLOT(unsuccessfulLogin()));
 }
 PollyElmavenInterfaceDialog::~PollyElmavenInterfaceDialog()
 {
@@ -435,15 +430,6 @@ void PollyElmavenInterfaceDialog::loginForPeakMl()
     } 
 }
 
-void PollyElmavenInterfaceDialog::emitLoginReady()
-{
-    emit loginResponse();
-}
-void PollyElmavenInterfaceDialog::loginFormClosed()
-{
-    emit loginUnsuccessful();
-}
-
 void PollyElmavenInterfaceDialog::initialSetup()
 {
     int nodeStatus = _pollyIntegration->checkNodeExecutable();
@@ -457,7 +443,7 @@ void PollyElmavenInterfaceDialog::initialSetup()
     int askForLogin = _pollyIntegration->askForLogin();
     if (askForLogin == 1) {
         try {
-            _callLoginForm(showPollyApps);
+            _callLoginForm();
         } catch (...) {
             QMessageBox msgBox(this);
             msgBox.setWindowModality(Qt::NonModal);
@@ -489,9 +475,9 @@ void PollyElmavenInterfaceDialog::showEPIError(QString errorMessage)
     QCoreApplication::processEvents();
 }
 
-void PollyElmavenInterfaceDialog::_callLoginForm(bool showPollyApp)
+void PollyElmavenInterfaceDialog::_callLoginForm(bool showPollyApps)
 {
-    _loginform = new LoginForm(this, showPollyApp);
+    _loginform = new LoginForm(this, showPollyApps);
     _loginform->setModal(true);
     _loginform->show();
 }
@@ -790,7 +776,7 @@ void PollyElmavenInterfaceDialog::_uploadDataToPolly()
     // redirect to login form if user credentials have not been saved
     int askForLogin = _pollyIntegration->askForLogin();
     if (askForLogin == 1) {
-        _callLoginForm(showPollyApps);
+        _callLoginForm();
         emit uploadFinished(false);
         return;
     }
@@ -1116,9 +1102,9 @@ QStringList PollyElmavenInterfaceDialog::_prepareFilesToUpload(QDir qdir,
                             + QDir::separator()
                             + datetimestamp
                             + "_Peaks_information_json_Elmaven_Polly.json";
-    peakTable->exportJsonToPolly(_writeableTempDir, jsonFilename, true);
 
     if (_selectedApp == PollyApp::PollyPhi) {
+        peakTable->exportJsonToPolly(_writeableTempDir, jsonFilename, true);
         QCoreApplication::processEvents();
         //Preparing the sample cohort file
         QString sampleCohortFileName = _writeableTempDir + QDir::separator() + datetimestamp +
