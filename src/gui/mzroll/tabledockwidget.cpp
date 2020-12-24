@@ -246,19 +246,22 @@ void TableDockWidget::setIntensityColName() {
 
 void TableDockWidget::undoLabel()
 {
-    auto groups = getSelectedGroups();
-    for(auto group : groups)
-    {
-        auto predictedLabel = group->predictedLabel();
-        float probability = group->predictionProbability();
-        auto id = undoBuffer[group->groupId()];
-        group->setPredictedLabel(group->labelForString(id.first), id.second);
-
-        pair<string, float> updatedLabel = make_pair(group->labelToString(predictedLabel),
-                                                     probability);
-        undoBuffer[group->groupId()] = updatedLabel;
-        updateTable();
-    }
+  if (!hasClassifiedGroups)
+    return;
+  
+  auto groups = getSelectedGroups();
+  for(auto group : groups) {
+    
+    auto id = undoBuffer[group->groupId()];
+    group->setPredictedLabel(group->labelForString(id.first), id.second);
+    saveLabelForUndo(group.get());
+    
+    auto item = itemForGroup(group.get());
+    updateItem(item);
+    updateLegend();
+    updateStatus();
+  }
+  
 }
 
 void TableDockWidget::displayNextGroupInCorrelationTable(string groupName)
@@ -305,7 +308,7 @@ void TableDockWidget::setupPeakTable() {
     colNames << "MS2 score";
     colNames << "#MS2 events";
     if(hasClassifiedGroups)
-      colNames << "Probability"; // TODO: add this column conditionally
+      colNames << "Classification Probability"; 
     colNames << "Rank";
   } else if (viewType == peakView) {
     vector<mzSample *> vsamples = _mainwindow->getVisibleSamples();
@@ -2042,6 +2045,13 @@ void TableDockWidget::showConsensusSpectra() {
   }
 }
 
+void TableDockWidget::saveLabelForUndo(PeakGroup* group) {
+  auto label = group->labelToString(group->predictedLabel());
+  auto probability = group->predictionProbability();
+  pair<string, float> groupLabel = make_pair(label, probability);
+  undoBuffer[group->groupId()] = groupLabel;
+}
+
 void TableDockWidget::markGroupGood() {
 
   auto currentGroups = getSelectedGroups();
@@ -2049,14 +2059,9 @@ void TableDockWidget::markGroupGood() {
   if (currentGroups.isEmpty())
       return;
 
-  if(hasClassifiedGroups)
-  {
-      for(auto group : currentGroups)
-      {
-          auto label = group->labelToString(group->predictedLabel());
-          auto probability = group->predictionProbability();
-          pair<string, float> groupLabel = make_pair(label, probability);
-          undoBuffer[group->groupId()] = groupLabel;
+  if(hasClassifiedGroups) {
+      for(auto group : currentGroups) {
+          saveLabelForUndo(group.get());
       }
   }
   setGroupLabel('g');
@@ -2075,12 +2080,10 @@ void TableDockWidget::markGroupBad() {
   if (currentGroups.isEmpty())
       return;
 
-  for(auto group : currentGroups)
-  {
-    auto label = group->labelToString(group->predictedLabel());
-    auto probability = group->predictionProbability();
-    pair<string, float> groupLabel = make_pair(label, probability);
-    undoBuffer[group->groupId()] = groupLabel;
+  if (hasClassifiedGroups) {
+    for(auto group : currentGroups) {
+      saveLabelForUndo(group.get());
+    }
   }
   setGroupLabel('b');
   
@@ -2467,6 +2470,10 @@ void TableDockWidget::contextMenuEvent(QContextMenuEvent *event) {
               &QAction::triggered,
               classificationWidget,
               &ClassificationWidget::showClassification);
+      if (treeWidget->selectedItems().size() != 1) {
+        // disable actions not relevant to individual peak-groups
+        z8->setEnabled(false);
+      }
   }
 
   QAction *selectedAction = menu.exec(event->globalPos());
@@ -2554,7 +2561,7 @@ void TableDockWidget::relabelGroups(float changedBadLimit, float changedMaybeGoo
       && changedMaybeGoodLimit == maybeGoodGroupLimit) {
     QMessageBox::warning(this,
                           "No Change!",
-                          "The curation parameters you entered are same as" 
+                          "The curation parameters you entered are same as " 
                           "they were in the classified peak-table.\nYou may change the range"
                           " and try again.\n");
    _legend->uncheckRelabel();
@@ -3639,7 +3646,7 @@ void ScatterplotTableDockWidget::setupPeakTable() {
     colNames << "Max quality";
     colNames << "MS2 score";
     colNames << "#MS2 events";
-    colNames << "Probability"; // TODO: add this column conditionally
+    colNames << "Classification Probability"; // TODO: add this column conditionally
     colNames << "Rank";
 
     // add scatterplot table columns
