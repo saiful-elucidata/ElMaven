@@ -26,7 +26,8 @@ public:
     {
         AuthenticateAndFetchData,
         UploadFiles,
-        SendEmail
+        SendEmail,
+        FetchPeakMLModels
     };
 
     EPIWorkerThread(PollyIntegration *pi) : _pollyIntegration(pi) {}
@@ -67,6 +68,7 @@ Q_SIGNALS:
     void licensesReady(QMap<PollyApp, bool> licenseMap);
     void projectsReady(QVariantMap projectNamesId);
     void authenticationFinished(QString username, QString status);
+    void peakMLAuthenticationFinished(QStringList models, QString status);
 
 private:
 
@@ -101,6 +103,8 @@ private:
     void _sendEmail();
 
     void _removeFilesFromDir(QDir dir, QStringList files);
+
+    void _getModels();
 };
 
 /**
@@ -176,6 +180,14 @@ public:
      */ 
     void loginForPeakMl();
 
+     /**
+     * @brief Runs QtProcess to hit Polly API that returns the 
+     * list of Models that is stored in S3 bucket for that 
+     * particular organisation of the current user.
+     * @return vector of model names.
+     */
+    void getModelsForPeakML();
+
 public Q_SLOTS:
 
     /**
@@ -196,6 +208,8 @@ public Q_SLOTS:
 
     void showEPIError(QString errorMessage);
 
+    void peakMLAccessControl(QStringList models, QString status);
+
 Q_SIGNALS:
 
     /**
@@ -203,6 +217,12 @@ Q_SIGNALS:
      * or otherwise.
      */
     void uploadFinished(bool success);
+
+    /**
+     * @brief Signal emitted when worker thread finished authentication for peakML
+     * and in authorization has been handled by peak detection dialog.
+     */ 
+    void peakMLAccess(QStringList models, QString status);
 
 private:
 
@@ -237,6 +257,12 @@ private:
      * their data.
      */
     PollyWaitDialog* _loadingDialog;
+
+    /**
+     * @brief A pointer to the loading dialog that fetches user data for peakML
+     * and appear on the top of peak detection dialog.
+     */ 
+    PollyWaitDialog* _loadingDialogForPeakML;
 
     /**
      * @brief A pointer to loginform class.
