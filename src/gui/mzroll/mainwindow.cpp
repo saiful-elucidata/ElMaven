@@ -529,7 +529,8 @@ using namespace mzUtils;
     srmDockWidget->setQQQToolBar();
 
     isotopeDialog = new IsotopeDialog(this);
-
+    
+    _usageTracker = new Mixpanel;
 	peakDetectionDialog = new PeakDetectionDialog(this);
 	peakDetectionDialog->setSettings(settings);
     connect(peakDetectionDialog, SIGNAL(findPeaksClicked()),
@@ -854,7 +855,6 @@ using namespace mzUtils;
 		}
 	}
 
-    _usageTracker = new Mixpanel;
     _infoDialog = new InfoDialog(this);
     _statusPriority = 0;
 }
