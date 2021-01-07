@@ -2598,6 +2598,11 @@ void TableDockWidget::relabelGroups(float changedBadLimit, float changedMaybeGoo
                                       }
                                       
                                 }
+
+                                auto parameters = group->parameters().get();
+                                parameters->badGroupUpperLimit = changedBadLimit;
+                                parameters->goodGroupLowerLimit = changedMaybeGoodLimit;
+                                group->setParameters(make_shared<MavenParameters>(*parameters));
                           };
 
   auto groups = _topLevelGroups;
@@ -2613,6 +2618,11 @@ void TableDockWidget::relabelGroups(float changedBadLimit, float changedMaybeGoo
       changePrediction(child.get(), 
                       changedBadLimit,
                       changedMaybeGoodLimit);
+
+    for (auto child : group->childAdducts())
+      changePrediction(child.get(), 
+                      changedBadLimit,
+                      changedMaybeGoodLimit);                  
   }
  _legend->selectAll();
   showAllGroups();
