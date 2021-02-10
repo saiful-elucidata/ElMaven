@@ -1014,7 +1014,7 @@ void MainWindow::explicitSave()
     saveProject(true);
 }
 
-void MainWindow::threadSave(const QString filename, const bool saveRawData)
+void MainWindow::threadSave(const QString filename, const bool saveRawData, const bool saveChromatogram)
 {
     if (saveWorker->isRunning()) {
         QMessageBox::information(this,
@@ -1034,7 +1034,7 @@ void MainWindow::threadSave(const QString filename, const bool saveRawData)
 
     autosaveWorker->deleteCurrentProject();
     _latestUserProjectName = filename;
-    saveWorker->saveProject(filename, saveRawData);
+    saveWorker->saveProject(filename, saveRawData, saveChromatogram);
 }
 
 void MainWindow::showWarning(QString message) {
