@@ -70,7 +70,14 @@ PollyElmavenInterfaceDialog::PollyElmavenInterfaceDialog(MainWindow* mw)
     groupSetCombo->setCurrentIndex(0);
     groupSetComboAlt->setCurrentIndex(0);
 
-    _selectedMode = SendMode::PollyApp;
+    int index = sendModeTab->currentIndex();
+    if (index == 0) {
+        // send to a Polly app
+        _selectedMode = SendMode::PollyApp;
+    } else {
+        // send only to Polly project
+        _selectedMode = SendMode::PollyProject;
+    }
 
     // init worker thread
     _worker = new EPIWorkerThread(_pollyIntegration);
