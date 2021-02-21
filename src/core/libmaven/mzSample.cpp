@@ -1222,6 +1222,7 @@ EIC* mzSample::getEIC(float precursorMz,
         case EIC::SUM: {
             double sumMz = 0.0;
             double sumIntensity = 0.0;
+            vector<float> mzValues;
             for (unsigned int k = 0; k < scan->nobs(); k++) {
                 if (productMz != 0.0f && abs(scan->mz[k] - productMz) > amuQ3)
                     continue;
@@ -1229,10 +1230,17 @@ EIC* mzSample::getEIC(float precursorMz,
                 double intensity = static_cast<double>(scan->intensity[k]);
                 sumIntensity += intensity;
                 sumMz += static_cast<double>(scan->mz[k]) * intensity;
+                mzValues.push_back(scan->mz[k]);
             }
             if (sumIntensity != 0.0) {
                 eicMz = static_cast<float>(sumMz / sumIntensity);
                 eicIntensity = static_cast<float>(sumIntensity);
+                eicFilterline = scan->filterLine;
+            } else {
+                eicMz = accumulate(begin(mzValues),
+                                   end(mzValues),
+                                   0.0) / mzValues.size();
+                eicIntensity = 0.0f;
                 eicFilterline = scan->filterLine;
             }
             break;
@@ -1407,14 +1415,21 @@ EIC* mzSample::getEIC(string srm, int eicType)
             case EIC::SUM: {
                 double sumMz = 0.0;
                 double sumIntensity = 0.0;
+                vector<float> mzValues;
                 for (unsigned int k = 0; k < scan->nobs(); k++) {
                     double intensity = static_cast<double>(scan->intensity[k]);
                     sumIntensity += intensity;
                     sumMz += static_cast<double>(scan->mz[k]) * intensity;
+                    mzValues.push_back(scan->mz[k]);
                 }
                 if (sumIntensity != 0.0) {
                     eicMz = static_cast<float>(sumMz / sumIntensity);
                     eicIntensity = static_cast<float>(sumIntensity);
+                } else {
+                    eicMz = accumulate(begin(mzValues),
+                                       end(mzValues),
+                                       0.0) / mzValues.size();
+                    eicIntensity = 0.0f;
                 }
                 break;
             }
